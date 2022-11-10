@@ -12,3 +12,28 @@ BEGIN
 	end if;
 END; $$
 DELIMITER ;
+
+
+DELIMITER $$
+CREATE PROCEDURE API2(IN date varchar(50), out candidate varchar(50))
+BEGIN
+declare votes_Biden int default 0;
+declare votes_Trump int default 0;
+	call checkTime(date, @t);
+    if @t = 'incorrect timestamp' then
+		set candidate = @t;
+	elseif @t = '0' then
+		set candidate = 'incorrect timestamp';
+	else
+		set votes_Biden = (select sum(Biden) from Penna where timestamp = @t);
+        set votes_Trump = (select sum(Trump) from Penna where timestamp = @t);
+        if (votes_Biden > votes_Trump) then
+			set candidate = "Biden";
+		elseif(votes_Biden < votes_Trump) then
+			set candidate = "Trump";
+		else
+			set candidate = "tied";
+		end if;
+    end if;
+END; $$
+DELIMITER ;
