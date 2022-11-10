@@ -169,4 +169,28 @@ DELIMITER ;
 
 
 
+DELIMITER $$
+CREATE PROCEDURE 3a()
+BEGIN
+	if (select EXISTS (select * from Penna where totalvotes < Biden + Trump) as violations) = 0 then
+		select concat("no violations") as result;
+	else
+		select concat("there is an instance where totalvotes < (trump + biden)") as result;
+    end if;
+END; $$
+DELIMITER ;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
