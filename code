@@ -1,17 +1,29 @@
 DELIMITER $$
-CREATE PROCEDURE checkTime(IN T varchar(50), out T1 varchar(50))
+CREATE PROCEDURE API2(IN date varchar(50), out candidate varchar(50))
 BEGIN
-    IF T not like '____-__-__%' THEN
-		set T1 = "incorrect timestamp";
-    ELSEIF T > (Select distinct SUBSTRING_INDEX(SUBSTRING_INDEX(timestamp, ':', 2), ' ', 1) from Penna order by timestamp desc limit 1) THEN
-		set T1 = (Select distinct timestamp from Penna order by timestamp desc limit 1);
-	ELSEIF T < (Select distinct SUBSTRING_INDEX(SUBSTRING_INDEX(timestamp, ':', 2), ' ', 1) from Penna order by timestamp asc limit 1) THEN
-		set T1 = '0';
-	ELSE
-		set T1 = (Select distinct timestamp from Penna where SUBSTRING_INDEX(SUBSTRING_INDEX(timestamp, ':', 2), ' ', 1) = T order by timestamp desc limit 1);
-	end if;
+declare votes_Biden int default 0;
+declare votes_Trump int default 0;
+	call checkTime(date, @t);
+    if @t = 'incorrect timestamp' then
+		set candidate = @t;
+	elseif @t = '0' then
+		set candidate = 'incorrect timestamp';
+	else
+		set votes_Biden = (select sum(Biden) from Penna where timestamp = @t);
+        set votes_Trump = (select sum(Trump) from Penna where timestamp = @t);
+        if (votes_Biden > votes_Trump) then
+			set candidate = "Biden";
+		elseif(votes_Biden < votes_Trump) then
+			set candidate = "Trump";
+		else
+			set candidate = "tied";
+		end if;
+    end if;
 END; $$
 DELIMITER ;
+
+
+
 
 
 DELIMITER $$
@@ -37,3 +49,124 @@ declare votes_Trump int default 0;
     end if;
 END; $$
 DELIMITER ;
+
+
+
+
+
+DELIMITER $$
+CREATE PROCEDURE API3(IN C varchar(50))
+BEGIN
+	If C = "Biden" then
+		select precinct from 	(select *, Biden / totalvotes as percentage 
+								from Penna 
+								where timestamp = (select max(Timestamp) from Penna) and Biden > Trump 
+								order by percentage desc limit 10) a;
+	elseif C = "Trump" then
+		select precinct from 	(select precinct, Trump / totalvotes as percentage 
+								from Penna 
+								where timestamp = (select max(Timestamp) from Penna) and Trump > Biden 
+								order by percentage desc limit 10) a;
+	else
+		select concat("incorrect candidate") as error;
+    end if;
+END; $$
+DELIMITER ;
+
+
+
+
+
+DELIMITER $$
+CREATE PROCEDURE API4(IN P varchar(50))
+BEGIN
+declare total int default 0;
+call getVotesBiden('2020-11-11 21:50:46', P, @vb);
+call getVotesTrump('2020-11-11 21:50:46', P, @vt);
+	if P in (select distinct precinct from Penna) then
+		set total = (select totalvotes from Penna where timestamp = (select max(Timestamp) from Penna) and precinct = P);
+        if(@vb > @vt) then
+			select concat("Biden won ", "with %", (@vb/total) * 100, " of the votes") as result;
+		elseif (@vt > @vb) then
+			select concat("Trump won ", "with %", (@vt/total) * 100, " of the votes") as result;
+		else
+			select concat("the votes are equal") as result;
+        end if;
+    else
+		select concat("incorrect candidate") as error;
+    end if;
+END; $$
+DELIMITER ;
+
+
+
+
+
+DELIMITER $$
+CREATE PROCEDURE API5(IN s varchar(50))
+BEGIN
+declare Trump_votes int default 0;
+declare Biden_votes int default 0;
+	if (select count(*) from Penna where timestamp = (select max(Timestamp) from Penna) and locate(s, precinct) > 0) > 0 then
+		set Trump_votes = (select sum(Trump) from Penna where timestamp = (select max(Timestamp) from Penna) and locate(s, precinct) > 0);
+		set Biden_votes = (select sum(Biden) from Penna where timestamp = (select max(Timestamp) from Penna) and locate(s, precinct) > 0);
+        if (Trump_votes > Biden_votes) then
+			select concat("Trump won with ", Trump_votes, " votes in union of precincts which have '", s, "' in their name") as result;
+		elseif (Trump_votes < Biden_votes) then
+			select concat("Biden won with ", Biden_votes, " votes in union of precincts which have '", s, "' in their name") as result;
+		else
+			select concat("votes were tied") as result;
+        end if;
+    else
+		select concat("this string is not found in any precincts") as result;
+    end if;
+END; $$
+DELIMITER ;
+
+
+
+
+
+DELIMITER $$
+CREATE PROCEDURE checkTime(IN T varchar(50), out T1 varchar(50))
+BEGIN
+    IF T not like '____-__-__%' THEN
+		set T1 = "incorrect timestamp";
+    ELSEIF T > (Select distinct SUBSTRING_INDEX(SUBSTRING_INDEX(timestamp, ':', 2), ' ', 1) from Penna order by timestamp desc limit 1) THEN
+		set T1 = (Select distinct timestamp from Penna order by timestamp desc limit 1);
+	ELSEIF T < (Select distinct SUBSTRING_INDEX(SUBSTRING_INDEX(timestamp, ':', 2), ' ', 1) from Penna order by timestamp asc limit 1) THEN
+		set T1 = '0';
+	ELSE
+		set T1 = (Select distinct timestamp from Penna where SUBSTRING_INDEX(SUBSTRING_INDEX(timestamp, ':', 2), ' ', 1) = T order by timestamp desc limit 1);
+	end if;
+END; $$
+DELIMITER ;
+
+
+
+
+
+DELIMITER $$
+CREATE PROCEDURE getVotesBiden(IN T varchar(50), IN P varchar(50), out votes int)
+BEGIN
+	set votes = (select Biden from Penna where timestamp = T and precinct = P);
+END; $$
+DELIMITER ;
+
+
+
+
+
+
+DELIMITER $$
+CREATE PROCEDURE getVotesTrump(IN T varchar(50), IN P varchar(50), out votes int)
+BEGIN
+	set votes = (select Trump from Penna where timestamp = T and precinct = P);
+END; $$
+DELIMITER ;
+
+
+
+
+
+
