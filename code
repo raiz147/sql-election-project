@@ -1,10 +1,14 @@
 DELIMITER $$
-CREATE PROCEDURE API1(IN C varchar(50), IN T varchar(50), IN P varchar(50))
+CREATE PROCEDURE checkTime(IN T varchar(50), out T1 varchar(50))
 BEGIN
-    IF C = "Biden" or C = "biden" THEN
-		select concat("biden") as result;
-	elseif C = "Trump" or C = "trump" then
-		select concat("biden") as result;
-     end if;
+    IF T not like '____-__-__%' THEN
+		set T1 = "incorrect timestamp";
+    ELSEIF T > (Select distinct SUBSTRING_INDEX(SUBSTRING_INDEX(timestamp, ':', 2), ' ', 1) from Penna order by timestamp desc limit 1) THEN
+		set T1 = (Select distinct timestamp from Penna order by timestamp desc limit 1);
+	ELSEIF T < (Select distinct SUBSTRING_INDEX(SUBSTRING_INDEX(timestamp, ':', 2), ' ', 1) from Penna order by timestamp asc limit 1) THEN
+		set T1 = '0';
+	ELSE
+		set T1 = (Select distinct timestamp from Penna where SUBSTRING_INDEX(SUBSTRING_INDEX(timestamp, ':', 2), ' ', 1) = T order by timestamp desc limit 1);
+	end if;
 END; $$
 DELIMITER ;
