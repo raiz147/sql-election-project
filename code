@@ -184,7 +184,56 @@ DELIMITER ;
 
 
 
-
+DELIMITER $$
+CREATE PROCEDURE newPenna()
+BEGIN
+declare p varchar(50) default "";
+declare t varchar(50) default "";
+declare prevt varchar(50) default "";
+declare nv int default 0;
+declare nb int default 0;
+declare nt int default 0;
+declare numP int default 0;
+declare numT int default 0;
+	create table newPenna1
+    (
+		Precinct varchar(50),
+        timestamp datetime,
+        newvotes int, 
+        new_Biden int,
+        new_Trump int
+    );
+	
+    a: loop
+		set p = (select distinct precinct from Penna limit numP, 1);
+        b: loop
+			set t = (select distinct timestamp from Penna limit numT, 1);
+			if (exists (select distinct timestamp from Penna where timestamp < t order by timestamp desc limit 1)) then
+				set prevt = (select distinct timestamp from Penna where timestamp < t order by timestamp desc limit 1);
+			else
+				set prevt = t;
+			end if;
+            if (0 = (select count(*) from Penna where timestamp = t and precinct = p)) then
+				set numT = numT +1;
+                iterate b ;
+            end if;
+            set nv = (select totalvotes from Penna where precinct = p and timestamp = t) - (select totalvotes from Penna where precinct = p and timestamp = prevt);
+			set nb = (select Biden from Penna where precinct = p and timestamp = t) - (select Biden from Penna where precinct = p and timestamp = prevt);
+			set nt = (select Trump from Penna where precinct = p and timestamp = t) - (select Trump from Penna where precinct = p and timestamp = prevt);
+			insert into newPenna1(Precinct, timestamp, newvotes, new_Biden, new_Trump) values (p, t, nv, nb, nt);
+			set numT = numT +1;
+			if (numT = (select count(distinct timestamp) from Penna)) then
+				leave b;
+			end if;
+        end loop;
+        set numT = 0;
+        set numP = numP +1;
+		if (numP = (select count(distinct precinct) from Penna)) then
+				leave a;
+		end if;
+    end loop;
+END; $$
+DELIMITER ;
 
 
 
