@@ -240,7 +240,7 @@ DELIMITER ;
 
 
 DELIMITER $$
-CREATE PROCEDURE newPenna()
+CREATE PROCEDURE switch()
 begin
 declare oldp varchar(50) default "";
 declare newp varchar(50) default "";
@@ -253,17 +253,15 @@ declare newv int default 0;
 declare newb int default 0;
 declare newt int default 0;
 DECLARE finished INTEGER DEFAULT 0;
-declare Tcursor cursor for select timestamp, precinct, totalvotes, biden, trump from Penna order by precinct, timestamp;
-declare Tcursor2 cursor for select timestamp, precinct, totalvotes, biden, trump from Penna order by precinct, timestamp;
-DECLARE CONTINUE HANDLER 
-        FOR NOT FOUND SET finished = 1;
-	create table newPenna
+declare Tcursor cursor for select timestamp, precinct, totalvotes, biden, trump from Penna  order by precinct, timestamp;
+declare Tcursor2 cursor for select timestamp, precinct, totalvotes, biden, trump from Penna  order by precinct, timestamp;
+DECLARE CONTINUE HANDLER FOR NOT FOUND SET finished = 1;
+	create table switch
     (
 		Precinct varchar(50),
         timestamp datetime,
-        newvotes int, 
-        new_Biden int,
-        new_Trump int
+        fromCandidate varchar(5), 
+		toCandidate varchar(5)
     );
 	
     open Tcursor;
@@ -276,7 +274,11 @@ DECLARE CONTINUE HANDLER
 			leave a;
 		end if;
         if (newp = oldp) then
-			insert into newPenna(Precinct, timestamp, newvotes, new_Biden, new_Trump) values (newp, t, newv-oldv, newb-oldb, newt-oldt);
+			if (oldt > oldb and newt < newb) then
+				insert into switch(Precinct, timestamp, fromCandidate, toCandidate) values (newp, t, "Trump", "Biden");
+			elseif (oldb > oldt and newb < newt ) then
+				insert into switch(Precinct, timestamp, fromCandidate, toCandidate) values (newp, t, "Biden", "Trump");
+            end if;
         end if;
 	end loop a;
 	CLOSE Tcursor;
