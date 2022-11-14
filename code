@@ -162,7 +162,7 @@ DELIMITER ;
 DELIMITER $$
 CREATE PROCEDURE getVotesBiden(IN T varchar(50), IN P varchar(50), out votes int)
 BEGIN
-	set votes = (select Biden from Penna where timestamp = T and precinct = P);
+	set votes = (select Biden from oldpenna where timestamp = T and precinct = P);
 END; $$
 DELIMITER ;
 
@@ -174,7 +174,7 @@ DELIMITER ;
 DELIMITER $$
 CREATE PROCEDURE getVotesTrump(IN T varchar(50), IN P varchar(50), out votes int)
 BEGIN
-	set votes = (select Trump from Penna where timestamp = T and precinct = P);
+	set votes = (select Trump from oldpenna where timestamp = T and precinct = P);
 END; $$
 DELIMITER ;
 
@@ -185,10 +185,10 @@ DELIMITER ;
 DELIMITER $$
 CREATE PROCEDURE 3a()
 BEGIN
-	if (select EXISTS (select * from Penna where totalvotes < Biden + Trump) as violations) = 0 then
-		select concat("no violations") as result;
+	if (select EXISTS (select * from oldPenna where totalvotes < Biden + Trump) as violations) = 0 then
+		select concat("true") as result;
 	else
-		select concat("there is an instance where totalvotes < (trump + biden)") as result;
+		select concat("false") as result;
     end if;
 END; $$
 DELIMITER ;
@@ -198,53 +198,30 @@ DELIMITER ;
 
 
 DELIMITER $$
-CREATE PROCEDURE newPenna()
+CREATE PROCEDURE 3b()
 BEGIN
-declare p varchar(50) default "";
-declare t varchar(50) default "";
-declare prevt varchar(50) default "";
-declare nv int default 0;
-declare nb int default 0;
-declare nt int default 0;
-declare numP int default 0;
-declare numT int default 0;
-	create table newPenna1
-    (
-		Precinct varchar(50),
-        timestamp datetime,
-        newvotes int, 
-        new_Biden int,
-        new_Trump int
-    );
-	
-    a: loop
-		set p = (select distinct precinct from Penna limit numP, 1);
-        b: loop
-			set t = (select distinct timestamp from Penna limit numT, 1);
-			if (exists (select distinct timestamp from Penna where timestamp < t order by timestamp desc limit 1)) then
-				set prevt = (select distinct timestamp from Penna where timestamp < t order by timestamp desc limit 1);
-			else
-				set prevt = t;
-			end if;
-            if (0 = (select count(*) from Penna where timestamp = t and precinct = p)) then
-				set numT = numT +1;
-                iterate b ;
-            end if;
-            set nv = (select totalvotes from Penna where precinct = p and timestamp = t) - (select totalvotes from Penna where precinct = p and timestamp = prevt);
-			set nb = (select Biden from Penna where precinct = p and timestamp = t) - (select Biden from Penna where precinct = p and timestamp = prevt);
-			set nt = (select Trump from Penna where precinct = p and timestamp = t) - (select Trump from Penna where precinct = p and timestamp = prevt);
-			insert into newPenna1(Precinct, timestamp, newvotes, new_Biden, new_Trump) values (p, t, nv, nb, nt);
-			set numT = numT +1;
-			if (numT = (select count(distinct timestamp) from Penna)) then
-				leave b;
-			end if;
-        end loop;
-        set numT = 0;
-        set numP = numP +1;
-		if (numP = (select count(distinct precinct) from Penna)) then
-				leave a;
-		end if;
-    end loop;
+	if (select EXISTS (select * from oldpenna where timestamp > '2020-11-11 23:59:59' or timestamp < '2020-11-03 00:00:00') as violations) = 0 then
+		select concat("true") as result;
+	else
+		select concat("false") as result;
+    end if;
+END; $$
+DELIMITER ;
+
+
+
+
+
+DELIMITER $$
+CREATE PROCEDURE 3c()
+BEGIN
+	if (select EXISTS (select * from oldpenna p1, oldpenna p2
+		where p1.precinct = p2.precinct and p1.timestamp > "2020-11-05 00:00:00" and p2.timestamp > "2020-11-05 00:00:00" 
+		and p1.Timestamp < p2.Timestamp and (p1.totalvotes > p2.totalvotes)) as violation) = 0 then
+		select concat("true") as result;
+	else
+		select concat("false") as result;
+    end if;
 END; $$
 DELIMITER ;
 
@@ -266,8 +243,8 @@ declare newv int default 0;
 declare newb int default 0;
 declare newt int default 0;
 DECLARE finished INTEGER DEFAULT 0;
-declare Tcursor cursor for select timestamp, precinct, totalvotes, biden, trump from Penna order by precinct, timestamp;
-declare Tcursor2 cursor for select timestamp, precinct, totalvotes, biden, trump from Penna order by precinct, timestamp;
+declare Tcursor cursor for select timestamp, precinct, totalvotes, biden, trump from oldpenna order by precinct, timestamp;
+declare Tcursor2 cursor for select timestamp, precinct, totalvotes, biden, trump from oldpenna order by precinct, timestamp;
 DECLARE CONTINUE HANDLER 
         FOR NOT FOUND SET finished = 1;
 	create table newPenna
@@ -278,7 +255,7 @@ DECLARE CONTINUE HANDLER
         new_Biden int,
         new_Trump int
     );
-
+	
     open Tcursor;
     open Tcursor2;
     fetch Tcursor2 into t, newp, newv, newb, newt;
@@ -315,8 +292,8 @@ declare newv int default 0;
 declare newb int default 0;
 declare newt int default 0;
 DECLARE finished INTEGER DEFAULT 0;
-declare Tcursor cursor for select timestamp, precinct, totalvotes, biden, trump from Penna  order by precinct, timestamp;
-declare Tcursor2 cursor for select timestamp, precinct, totalvotes, biden, trump from Penna  order by precinct, timestamp;
+declare Tcursor cursor for select timestamp, precinct, totalvotes, biden, trump from oldpenna  order by precinct, timestamp;
+declare Tcursor2 cursor for select timestamp, precinct, totalvotes, biden, trump from oldpenna  order by precinct, timestamp;
 DECLARE CONTINUE HANDLER FOR NOT FOUND SET finished = 1;
 	create table switch
     (
