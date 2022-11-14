@@ -240,6 +240,55 @@ DELIMITER ;
 
 
 DELIMITER $$
+CREATE PROCEDURE newPenna()
+begin
+declare oldp varchar(50) default "";
+declare newp varchar(50) default "";
+declare t varchar(50) default "";
+declare prevt varchar(50) default "";
+declare oldv int default 0;
+declare oldb int default 0;
+declare oldt int default 0;     
+declare newv int default 0;
+declare newb int default 0;
+declare newt int default 0;
+DECLARE finished INTEGER DEFAULT 0;
+declare Tcursor cursor for select timestamp, precinct, totalvotes, biden, trump from Penna order by precinct, timestamp;
+declare Tcursor2 cursor for select timestamp, precinct, totalvotes, biden, trump from Penna order by precinct, timestamp;
+DECLARE CONTINUE HANDLER 
+        FOR NOT FOUND SET finished = 1;
+	create table newPenna
+    (
+		Precinct varchar(50),
+        timestamp datetime,
+        newvotes int, 
+        new_Biden int,
+        new_Trump int
+    );
+
+    open Tcursor;
+    open Tcursor2;
+    fetch Tcursor2 into t, newp, newv, newb, newt;
+    a: loop
+		fetch Tcursor into prevt, oldp, oldv, oldb, oldt;
+		fetch Tcursor2 into t, newp, newv, newb, newt;
+        if finished = 1 then
+			leave a;
+		end if;
+        if (newp = oldp) then
+			insert into newPenna(Precinct, timestamp, newvotes, new_Biden, new_Trump) values (newp, t, newv-oldv, newb-oldb, newt-oldt);
+        end if;
+	end loop a;
+	CLOSE Tcursor;
+    CLOSE Tcursor2;
+end;$$
+DELIMITER ;
+
+
+
+
+
+DELIMITER $$
 CREATE PROCEDURE switch()
 begin
 declare oldp varchar(50) default "";
