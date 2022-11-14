@@ -339,6 +339,39 @@ DELIMITER ;
 
 
 
-
+DELIMITER $$
+CREATE PROCEDURE moveVotes(IN p varchar(50), in t varchar(50), in candidate varchar(50), in votes int)
+BEGIN
+    if (p not in (select distinct precinct from oldpenna)) then
+		select concat("incorrect precinct") as result;
+	else
+		if (t not in (select distinct timestamp from oldpenna)) then
+			select concat("incorrect timestamp") as result;
+		else
+			if votes < 1 then
+				select concat("please enter a positive numebr of votes") as result;
+			else
+				if (candidate = "biden") then
+					set @B = (select Biden from penna where timestamp = t and precinct = p);
+					if (@B >= votes) then
+						update penna set Biden = Biden - votes, Trump = Trump + votes where precinct = p and timestamp >= t;
+					else
+						select concat("Biden doesn't have enough votes to move") as result;
+					end if;
+				elseif (candidate = "trump") then
+					set @T = (select Trump from penna where timestamp = t and precinct = p);
+					if (@T >= votes) then
+						update penna set Trump = Trump - votes, Biden = Biden + votes where precinct = p and timestamp >= t;
+					else
+						select concat("Trump doesn't have enough votes to move") as result;
+					end if;
+				else
+					select concat ("incorrect candidate") as result;
+				end if;
+			end if;
+		end if;
+    end if;
+END; $$
+DELIMITER ;
 
 
