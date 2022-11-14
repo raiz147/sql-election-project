@@ -1,24 +1,22 @@
 DELIMITER $$
-CREATE PROCEDURE API2(IN date varchar(50), out candidate varchar(50))
+CREATE PROCEDURE API1(IN C varchar(50), IN T varchar(50), IN P varchar(50))
 BEGIN
-declare votes_Biden int default 0;
-declare votes_Trump int default 0;
-	call checkTime(date, @t);
-    if @t = 'incorrect timestamp' then
-		set candidate = @t;
-	elseif @t = '0' then
-		set candidate = 'incorrect timestamp';
-	else
-		set votes_Biden = (select sum(Biden) from Penna where timestamp = @t);
-        set votes_Trump = (select sum(Trump) from Penna where timestamp = @t);
-        if (votes_Biden > votes_Trump) then
-			set candidate = "Biden";
-		elseif(votes_Biden < votes_Trump) then
-			set candidate = "Trump";
+call checkTime(T, @t);
+    if (@t in (select distinct timestamp from oldpenna)) then
+		if (P in (select distinct precinct from oldpenna)) then 
+			if C = 'Biden' then
+				select concat((select Biden from oldpenna where timestamp = @t and precinct = P)) as result;
+			elseif C = 'Trump' then
+				select concat((select Trump from oldpenna where timestamp = @t and precinct = P)) as result;
+			else
+				select concat('incorrect candidate') as result;
+            end if;
 		else
-			set candidate = "tied";
+			select concat('incorrect precinct') as result;
 		end if;
-    end if;
+	else
+		select concat('incorrect timestamp') as result;
+	end if;
 END; $$
 DELIMITER ;
 
